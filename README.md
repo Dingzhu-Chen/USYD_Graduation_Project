@@ -1,6 +1,6 @@
 # CS45 - Bushfire Path Algorithm with Bushfire Warning System
 
-**8th August 2024 - 25th October 2024**
+**8th August 2024 - 25th November 2024**
 
 ## PROJECT OVERVIEW
 
