@@ -1,0 +1,24 @@
+.table td.img-cell img {
+    max-width: 250px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+.row-container {
+    display: flex;
+    justify-content: space-between; /* Pushes elements to opposite ends */
+    align-items: center; /* Vertically centers the elements */
+}
+
+.row-container h1 {
+    margin: 0; /* Remove margin to align better with the button */
+}
+
+.row-container button {
+    margin-right: 5%; /* Remove margin to align better with the button */
+}
+
+#newPropertyBtn{
+    margin-right: 5%;
+}

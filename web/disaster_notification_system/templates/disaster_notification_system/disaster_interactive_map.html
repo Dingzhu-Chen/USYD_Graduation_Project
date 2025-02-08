@@ -1,0 +1,424 @@
+{% extends 'appboard/base.html' %}
+
+{% load static %}
+
+{% block head_title %}
+    Disaster Notification System
+{% endblock %}
+
+{% block extra_head %}
+  <!--Map-->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.4.0/dist/leaflet.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/leaflet@1.4.0/dist/leaflet.css"
+    />
+    <script src="https://api.windy.com/assets/map-forecast/libBoot.js"></script>
+    <link rel="stylesheet" href="{% static 'disaster_notification_system/css/map.css' %}" />
+
+    <!--Leaflet easybutton-->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2/src/easy-button.css">
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2/src/easy-button.js"></script>
+
+    <!--Leaflet sidbar-->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-sidebar-v2@3.1.0/css/leaflet-sidebar.min.css" />
+    <script src="https://unpkg.com/leaflet-sidebar-v2@3.1.0/js/leaflet-sidebar.min.js"></script>
+
+    <!--Fullscreen-->
+    <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css"
+      rel="stylesheet"
+    />
+
+    <!--Leaflet Arrowheads-->
+    <script src="{% static 'disaster_notification_system/js/leaflet.geometryutil.js' %}"></script>
+    <script src="{% static 'disaster_notification_system/js/leaflet-arrowheads.js' %}"></script>
+
+    <!--Legend-->
+    <link
+      rel="stylesheet"
+      href="{% static 'disaster_notification_system/css/legend.css' %}"
+    />
+    <script src="{% static 'disaster_notification_system/js/legend.js' %}"></script>
+    
+<style>
+  thead {
+    color: black !important;
+  }
+  tbody {
+    color: gray !important;
+  }
+  .cards tbody tr {
+    float: left;
+    width: 100%;
+    margin: 0.5rem;
+    border: 0.0625rem solid rgba(0, 0, 0, .125);
+    border-radius: .25rem;
+    box-shadow: 0.25rem 0.25rem 0.5rem rgba(0, 0, 0, 0.25);
+  }
+    
+  .cards tbody td {
+    display: block;
+  }
+  
+  .cards thead {
+    display: none;
+    color: #8080 ;
+  }
+    
+  .cards td:before {
+    content: attr(data-label);
+    position: relative;
+    float: left;
+    color: #808080;
+    min-width: 4rem;
+    margin-left: 0;
+    margin-right: 1rem;
+    text-align: left;   
+  }
+    
+  tr.selected td:before {
+    color: #CCC;
+  }
+    
+  .table .avatar {
+    width: 50px;
+  }
+    
+  .cards .avatar {
+    width: 150px;
+    height: 150px;
+    margin: 15px;
+  }
+
+  .modal#propertyModal, .modal#bushfireModal  {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    overflow: auto;
+  }
+
+  .modal-content#propertyModalContainer, .modal-content#bushfireModalContainer {
+    background-color: #fff;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 8px;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  #propertyModalClose , #bushfireModalClose{
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+  }
+
+  #propertyModalClose:hover,
+  #propertyModalClose:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  #bushfireModalClose:hover,
+  #bushfireModalClose:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  bushfireModal
+
+  #modalHeaderContainer{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .propertyModalButton, .bushfireModalButton{
+    background : #007bff;
+    color : #fff;
+    border : none;
+    padding : 8px 12px;
+    cursor : pointer;
+  }
+
+  #bushfireDetails {
+    padding: 10px;
+  }
+
+  .leaflet-sidebar-pane h1 {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+
+  #leafLetSidebar{
+    z-index:800 !important;
+    float: right !important;
+    position: absolute !important;
+  }
+
+  #windy #map-container .leaflet-control-container{
+    display: block !important;
+  }
+
+  .leaflet-sidebar.collapsed{
+    height:40px;
+  }
+
+  /* Basic styling for tab bar */
+  .tab-bar {
+    overflow: hidden;
+    background-color: var(--ofx-blue);
+    max-width: 900px;
+    min-width:500px;
+    width: fit-content;
+    border-radius: 10px;
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tab-bar button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+    color: white;
+    flex:1;
+  }
+
+  .tab-bar button:hover {
+    background-color: #c8ddfc;
+    color: black;
+  }
+
+  .tab-bar button.active {
+    background-color: var(--ofx-blue);
+    color: var(--ofx-light);
+    font-weight: 900;
+    opacity: 1;
+  }
+
+  .tab-content {
+    display: none;
+    padding: 20px;
+  }
+
+  #map {
+    height: 400px;
+  }
+
+  .active-content {
+    display: block;
+  }
+
+  #dashboard-container {
+    display: flex;
+    justify-content: space-between;
+    padding:10px;
+  }
+
+  #recentBushfires, #cityWeather {
+    overflow-y: auto;
+    width: 48%;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd; 
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    height: 500px;
+  }
+
+  #recentBushfires h5, #cityWeather h5 {
+    position: sticky;
+    top: 0;
+    background-color: #f9f9f9; 
+    z-index: 10;
+    padding-left: 20px;
+    padding-top: 20px;
+    padding-bottom: 10px;
+  }
+
+  #dashboard ul {
+    list-style-type: none;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  #dashboard li {
+    padding: 10px;
+    margin: 8px 0;
+    background-color: #fff; 
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+  }
+
+  #dashboard li:hover {
+    background-color: #f1f1f1;
+  }
+
+  #dashboard h3 {
+    font-size: 1.2em;
+    margin-bottom: 15px;
+    text-align: center;
+    color: #333;
+  }
+
+  #windy {
+    width: 100%;
+    height: 700px;
+  }
+
+  #weatherList, #bushfireList{
+    overflow-y: auto;
+  }
+
+  #bushfireModalList, #propertyList{
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+    /* Custom scrollbar for WebKit browsers (Chrome, Safari) */
+  #bushfireModalList::-webkit-scrollbar,
+  #propertyList::-webkit-scrollbar {
+    width: 12px; /* Width of the scrollbar */
+  }
+
+  #bushfireModalList::-webkit-scrollbar-track,
+  #propertyList::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px; 
+  }
+
+  #bushfireModalList::-webkit-scrollbar-thumb,
+  #propertyList::-webkit-scrollbar-thumb {
+    background: #888; 
+    border-radius: 10px;
+  }
+
+  #bushfireModalList::-webkit-scrollbar-thumb:hover,
+  #propertyList::-webkit-scrollbar-thumb:hover {
+    background: #555; 
+  }
+
+  /* Custom scrollbar for Firefox */
+  #bushfireModalList,
+  #propertyList {
+    scrollbar-width: auto; 
+    scrollbar-color: #888 #f1f1f1; 
+  }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid content-margin-top-offset mb-5">
+  <div class="tab-bar">
+    <button class="tabItem active" id="dashboard-tab">Dashboard</button>
+    <button class="tabItem" id="map-tab">Map</button>
+  </div>
+
+  <div id="dashboard" class="container tab-content active-content">
+    <h4 class="text-ofx-blue pb-4">Dashboard<i class="ms-2 fas fa-fw fal"></i></h4>
+    <div id="dashboard-container">
+      <div id="recentBushfires">
+        <h5>Recent Bushfires</h5>
+        <ul id="bushfireList">
+          <!-- List of bushfires will go here -->
+        </ul>
+      </div>
+
+      <div id="cityWeather">
+        <h5>Today's Weather Condition</h5>
+        <ul id="weatherList">
+          <!-- List of weather conditions will go here -->
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="container tab-content" id="bushfire-map"> 
+
+    <h4 class="text-ofx-blue pb-4">Bushfire Monitoring Map<i class="ms-2 fas fa-fw fal fa-map"></i></h4>
+  <!--Display Map-->
+  <div id="windy"></div>
+  <!-- <div id="disaster_map"></div> -->
+  <div id="leafLetSidebar" class="leaflet-sidebar collapsed">
+    <div class="leaflet-sidebar-tabs">
+        <ul role="tablist">
+            <!-- Sidebar tab icons -->
+            <li><a href="#details" role="tab"><i class="fa fa-info"></i></a></li>
+        </ul>
+    </div>
+
+    <div class="leaflet-sidebar-content">
+        <!-- Tab content for bushfire details -->
+        <div class="leaflet-sidebar-pane" id="details">
+            <h1 class="sidebar-header">Bushfire Details<span class="leaflet-sidebar-close"><i class="fa fa-times"></i></span></h1>
+            <div id="bushfireDetails">
+                <!-- Bushfire details will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <div id="propertyModal" class="modal">
+    <div id="propertyModalContainer" class="modal-content">
+      <span id="propertyModalClose" class="close">&times;</span>
+      <div id="modalHeaderContainer">
+        <h2>Properties List</h2>
+        <button class="propertyModalButton" id="propertyModalButton">Manage properties</button>
+      </div>
+      <div id="propertyList">
+        <!-- Property details will be dynamically inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <div id="bushfireModal" class="modal">
+    <div id="bushfireModalContainer" class="modal-content">
+      <span id="bushfireModalClose" class="close">&times;</span>
+      <div id="modalHeaderContainer">
+        <h2>Recent Bushfire</h2>
+      </div>
+      <div id="bushfireModalList">
+        <!-- bushfire details will be dynamically inserted here -->
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{% static 'disaster_notification_system/js/get_disaster_interactive_map.js' %}"></script>
+
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/dataTables.buttons.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/buttons.html5.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/buttons.print.min.js"></script>
+
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.3.2/js/buttons.colVis.min.js"></script>
+
+{% endblock %}

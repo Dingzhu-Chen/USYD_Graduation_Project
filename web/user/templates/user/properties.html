@@ -1,0 +1,83 @@
+{% extends 'appboard/base.html' %}
+{% load static %}
+{% block extra_head %}
+  <link href="{% static '/user/css/properties.css' %}" rel="stylesheet">
+{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row-container">
+        <h1>Properties Management</h1>
+        <a href="/user/properties/add_edit" id="newPropertyBtn" class="btn btn-primary">New Property</a> 
+    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Address</th>
+                <th>Toggle Notification</th>
+                <th>Remove</th>
+                <th>Edit</th>
+            </tr>
+        </thead>
+        <tbody>
+          {% for property in Properties %}
+            <tr>
+                <td>{{ property.name }}</td>
+                <td>{{ property.address }}</td>
+                <td>
+                  <!-- Toggle Notification Button -->
+                  <button class="btn btn-primary" onclick="toggleNotification('{{ property.id }}')" id="email-toggle-{{ property.id }}">
+                    {% if property.receive_alert %}
+                      Disable Notification
+                    {% else %}
+                      Enable Notification
+                    {% endif %}
+                  </button>
+                </td>
+                <td>
+                    <form method="POST" action="{% url 'user:delete_property' property.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Remove</button>
+                    </form>
+                </td>
+                <td>
+                    <a class="btn btn-primary" href="/user/properties/add_edit?id={{ property.id }}">Edit</a>
+                </td>
+            </tr>
+          {% empty %}
+            <tr>
+                <td colspan="5">No properties found. Click "New Property" to add one.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script>
+  function toggleNotification(propertyId) {
+    const csrfToken = "{{ csrf_token }}"; // Ensure CSRF token is available for the POST request
+    
+    fetch(`/user/properties/toggle_alert/${propertyId}/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 200) {
+        const button = document.getElementById(`email-toggle-${propertyId}`);
+        button.innerHTML = data.receive_alert ? 'Disable Notification' : 'Enable Notification';
+      } else {
+        alert('Failed to toggle notification.');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
+  }
+</script>
+{% endblock %}

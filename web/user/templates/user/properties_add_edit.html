@@ -1,0 +1,93 @@
+{% extends 'appboard/base.html' %}
+{% load static %}
+{% block extra_head %}
+<link href="{% static '/user/css/properties_add_edit.css' %}" rel="stylesheet">
+<!-- Load Google Maps JavaScript API with Places library -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBVJJlarTPGYnjP--n2zyxPT03U6HWvlcA&libraries=places"></script>
+{% endblock %}
+{% block content %}
+<div class="container">
+    <h1>{{ page_title }}</h1>
+    <form method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="propertyName">Property Name</label>
+            <input type="text" class="form-control" id="propertyName" name="propertyName"
+                placeholder="Enter property name" value="{{ property.name|default_if_none:'' }}">
+        </div>
+        <div class="form-group">
+            <label for="propertyAddress">Property Address</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="propertyAddress" name="propertyAddress"
+                    placeholder="Enter property address" value="{{ property.address|default_if_none:'' }}">
+                <button type="button" class="btn btn-outline-secondary" id="getCurrentLocation">Use Current
+                    Location</button>
+            </div>
+        </div>
+        <!-- Hidden inputs for longitude and latitude -->
+        <input type="hidden" id="longitude" name="longitude" value="{{ property.longitude|default_if_none:'' }}">
+        <input type="hidden" id="latitude" name="latitude" value="{{ property.latitude|default_if_none:'' }}">
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="/user/properties/" class="btn btn-secondary" id="cancelBtn">Cancel</a>
+        </div>
+    </form>
+</div>
+{% block extra_body %}
+<script>
+    // Initialize the Google Places Autocomplete for propertyAddress input
+    function initializeAutocomplete() {
+        var input = document.getElementById('propertyAddress');
+        var autocomplete = new google.maps.places.Autocomplete(input, {
+            types: ['geocode'] // This restricts the results to geographical addresses.
+        });
+
+        autocomplete.addListener('place_changed', function () {
+            var place = autocomplete.getPlace();
+            if (place.geometry) {
+                var lat = place.geometry.location.lat();
+                var lon = place.geometry.location.lng();
+
+                // Set the hidden inputs for longitude and latitude
+                document.getElementById('latitude').value = lat;
+                document.getElementById('longitude').value = lon;
+            }
+        });
+    }
+
+    // Get current location and update address and coordinates
+    document.getElementById('getCurrentLocation').addEventListener('click', function () {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                var lat = position.coords.latitude;
+                var lon = position.coords.longitude;
+
+                // Set the hidden inputs for longitude and latitude
+                document.getElementById('latitude').value = lat;
+                document.getElementById('longitude').value = lon;
+
+                // Use the coordinates to get the address using Google Maps Geocoding API
+                fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=AIzaSyBVJJlarTPGYnjP--n2zyxPT03U6HWvlcA&language=en`)
+                    .then(response => response.json())
+                    .then(data => {
+                        var address = data.results[0].formatted_address;
+                        document.getElementById('propertyAddress').value = address;
+                    })
+                    .catch(error => console.log("Geocoding error:", error));
+            }, function(error) {
+                console.error('Error fetching location:', error);
+                alert('Error fetching location: ' + error.message);
+            });
+        } else {
+            alert('Geolocation is not supported by this browser.');
+        }
+    });
+
+    // Load the autocomplete once the page is fully loaded
+    window.onload = function() {
+        initializeAutocomplete();
+    };
+</script>
+{% endblock %}
+{% endblock %}
